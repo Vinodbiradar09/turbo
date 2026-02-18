@@ -1,1 +1,1 @@
-export { roomSchema } from "./schema";
+export { roomSchema , joinRoomSchema , roomMemberSchema , makeAdminSchema } from "./schema";

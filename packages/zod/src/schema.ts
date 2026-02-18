@@ -5,4 +5,16 @@ const roomSchema = z.object({
     img : z.instanceof(File).optional(),
 })
 
-export { roomSchema };
+const joinRoomSchema = z.object({
+    roomId : z.string(),
+})
+
+const roomMemberSchema = z.object({
+    roomMemberId : z.string(),
+})
+
+const makeAdminSchema = z.object({
+    roomId : z.string(),
+    userId : z.string(),
+})
+export { roomSchema , joinRoomSchema , roomMemberSchema , makeAdminSchema };

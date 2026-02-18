@@ -16,6 +16,10 @@ export class RedisCache {
     return `lock:${type}:${args.join(":")}`;
   }
 
+  private roomKey( type : string , args : string[]){
+    return `room:${type}:${args.join(":")}`;
+  }
+
   async set(type: string, args: string[], value: any, options?: CacheOptions) {
     const key = this.cacheKey(type, args);
     const data: any = JSON.stringify(value);
@@ -48,8 +52,7 @@ export class RedisCache {
     // if not present create lock key
     const lockKey = this.lockKey(type, args);
     // now lock 
-    const lock = await this.redis.call(
-      "SET",
+    const lock = await this.redis.set(
       lockKey,
       "1",
       "PX",
@@ -76,6 +79,16 @@ export class RedisCache {
     } finally {
       await this.redis.del(lockKey);
     }
+  }
+
+  async join(type : string , args : string[] , socketId : string){
+    const roomKey = this.roomKey(type , args);
+    await this.redis.sadd(roomKey , socketId);
+  }
+
+  async end( type : string , args : string[] , socketId : string){
+    const roomKey = this.roomKey(type , args);
+    await this.redis.srem(roomKey , socketId);
   }
 
   sleep(ms: number) {
