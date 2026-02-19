@@ -1,1 +1,1 @@
-export { roomSchema , joinRoomSchema , roomMemberSchema , makeAdminSchema } from "./schema";
+export { createRoomSchema , joinRoomSchema , leaveRoomSchema , makeAdminSchema , deleteRoomSchema , degradeAdminSchema , removeMemberSchema } from "./schema";

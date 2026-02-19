@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const roomSchema = z.object({
+const createRoomSchema = z.object({
     name : z.string().min(1 , "Name is required"),
     img : z.instanceof(File).optional(),
 })
@@ -9,12 +9,26 @@ const joinRoomSchema = z.object({
     roomId : z.string(),
 })
 
-const roomMemberSchema = z.object({
-    roomMemberId : z.string(),
+const leaveRoomSchema = z.object({
+    roomId : z.string(),
 })
 
 const makeAdminSchema = z.object({
     roomId : z.string(),
     userId : z.string(),
 })
-export { roomSchema , joinRoomSchema , roomMemberSchema , makeAdminSchema };
+
+const degradeAdminSchema = z.object({
+    roomId : z.string(),
+    userId : z.string(),
+})
+
+const deleteRoomSchema = z.object({
+    roomId : z.string(),
+})
+
+const removeMemberSchema = z.object({
+    roomId : z.string(),
+    userId : z.string(),
+})
+export { createRoomSchema , joinRoomSchema , leaveRoomSchema , makeAdminSchema , deleteRoomSchema , degradeAdminSchema , removeMemberSchema };
