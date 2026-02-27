@@ -53,6 +53,7 @@ export default function DashboardClient({ session, initialUsers }: Props) {
         if (!res.ok) throw new Error(`Failed: ${res.status}`);
         const data = await res.json();
         setNewName(data.name);
+        router.refresh();
       } catch (err) {
         console.error(err);
         setError("Failed to generate name.");

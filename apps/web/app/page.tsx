@@ -1,14 +1,23 @@
-import Image, { type ImageProps } from "next/image";
-import { Button } from "@repo/ui/button";
-import styles from "./page.module.css";
-import { prisma } from "@repo/db";
+import Nav from "@/components/Nav";
+import Hero from "@/components/Hero";
+import StatsBand from "@/components/StatsBand";
+import Features from "@/components/Features";
+import HowItWorks from "@/components/HowItWorks";
+import Testimonials from "@/components/Testimonials";
+import CTA from "@/components/CTA";
+import Footer from "@/components/Footer";
 
-
-export default async function Home() {
-  const user = await prisma.user.findFirst() 
+export default function Home() {
   return (
-    <div className={styles.page}>
-      {user?.name ?? "No user added yet"}
-    </div>
+    <main>
+      <Nav />
+      <Hero />
+      <StatsBand />
+      <Features />
+      <HowItWorks />
+      <Testimonials />
+      <CTA />
+      <Footer />
+    </main>
   );
 }
