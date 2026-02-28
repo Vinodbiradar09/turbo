@@ -26,10 +26,10 @@ export default function CTA() {
         </p>
         <div className="flex items-center justify-center gap-6">
           <Link
-            href="#"
+            href="/login"
             className="bg-cream text-moss px-11 py-4.25 rounded-full font-dm text-[15px] font-medium no-underline shadow-[0_8px_32px_rgba(0,0,0,0.2)] transition-all duration-300 hover:-translate-y-0.75 hover:shadow-[0_16px_48px_rgba(0,0,0,0.3)]"
           >
-            Join the waitlist
+            Get Started
           </Link>
           <Link
             href="#features"

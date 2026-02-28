@@ -37,7 +37,7 @@ export default function Nav() {
         </li>
         <li>
           <Link
-            href="#join"
+            href="/login"
             className="bg-moss text-cream text-[13px] tracking-[0.06em] no-underline px-7 py-2.75 rounded-full transition-all duration-300 hover:bg-sage hover:-translate-y-px"
           >
             Join the Circl

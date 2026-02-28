@@ -21,7 +21,6 @@ export class RoomManager {
   private subscribedRooms = new Set<string>();
 
   constructor(private readonly server: http.Server) {
-    console.log("hey reaching");
     this.wss = new WebSocketServer({ noServer: true });
     this.setupUpgradeHandler();
     this.initializeConnections();
@@ -58,7 +57,6 @@ export class RoomManager {
 
   // on socket connection
   private initializeConnections() {
-    console.log("hehhe");
     this.wss.on("connection", async (ws: AuthenticatedWebSocket) => {
       console.log(
         `ws connected | user=${ws.user.email} | server=${process.env.PORT}`,
@@ -81,6 +79,9 @@ export class RoomManager {
         break;
       case "BROADCAST":
         this.sendMessagesToWsRooms(ws, data);
+        break;
+      case "ROOMSNEARME":
+        this.roomsNearMe(ws, data);
         break;
     }
   }
@@ -177,6 +178,7 @@ export class RoomManager {
     ]).catch((err) => console.log("error in pushing messages to kafka", err));
   }
 
+  private async roomsNearMe(ws: AuthenticatedWebSocket, data: any) {}
   // on close connection remove the socket , check for the last if there is zero sockets then unsubscribe to this roomId
   private onClose(ws: AuthenticatedWebSocket) {
     for (const [roomId, sockets] of this.rooms.entries()) {

@@ -41,6 +41,7 @@ const Rooms = {
   // makeAdmins
   // blackListRooms
 
+  // move this http to wss
   async getRoomsNearMe(req: Request, res: Response) {
     try {
       if (!req.user || !req.user.id) {

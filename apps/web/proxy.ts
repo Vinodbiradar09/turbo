@@ -15,6 +15,11 @@ export default function proxy(request: NextRequest) {
     pathname === "/" ||
     pathname === "/login" ||
     pathname === "/signup" ||
+    pathname === "/privacy" ||
+    pathname === "/about" ||
+    pathname === "/blog" ||
+    pathname === "/careers" ||
+    pathname === "/contact" ||
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/v1");
 

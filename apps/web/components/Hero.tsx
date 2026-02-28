@@ -99,10 +99,10 @@ export default function Hero() {
 
         <motion.div {...fadeUp(0.65)} className="flex items-center gap-7">
           <Link
-            href="#join"
+            href="/login"
             className="bg-moss text-cream px-10 py-4.25 rounded-full font-dm text-[15px] font-normal tracking-[0.04em] no-underline shadow-[0_8px_32px_rgba(46,59,47,0.22)] transition-all duration-300 hover:-translate-y-0.75 hover:shadow-[0_16px_48px_rgba(46,59,47,0.3)] hover:bg-sage"
           >
-            Get early access
+            Get Started
           </Link>
           <Link
             href="#how"

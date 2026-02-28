@@ -1,5 +1,19 @@
 import Link from "next/link";
 
+const productLinks = [
+  { label: "Features", href: "/#features" },
+  { label: "How it works", href: "/#how" },
+  { label: "Rooms", href: "/rooms/nearme" },
+  { label: "Privacy", href: "/privacy" },
+];
+
+const companyLinks = [
+  { label: "About", href: "/about" },
+  { label: "Blog", href: "/blog" },
+  { label: "Careers", href: "/careers" },
+  { label: "Contact", href: "/contact" },
+];
+
 export default function Footer() {
   return (
     <>
@@ -20,13 +34,13 @@ export default function Footer() {
             <h4 className="text-[11px] tracking-[0.12em] uppercase text-white/30 mb-5">
               Product
             </h4>
-            {["Features", "How it works", "Rooms", "Privacy"].map((item) => (
+            {productLinks.map(({ label, href }) => (
               <Link
-                key={item}
-                href="#"
+                key={label}
+                href={href}
                 className="block text-white/60 no-underline text-[14px] mb-2.5 transition-colors hover:text-white"
               >
-                {item}
+                {label}
               </Link>
             ))}
           </div>
@@ -34,13 +48,13 @@ export default function Footer() {
             <h4 className="text-[11px] tracking-[0.12em] uppercase text-white/30 mb-5">
               Company
             </h4>
-            {["About", "Blog", "Careers", "Contact"].map((item) => (
+            {companyLinks.map(({ label, href }) => (
               <Link
-                key={item}
-                href="#"
+                key={label}
+                href={href}
                 className="block text-white/60 no-underline text-[14px] mb-2.5 transition-colors hover:text-white"
               >
-                {item}
+                {label}
               </Link>
             ))}
           </div>
