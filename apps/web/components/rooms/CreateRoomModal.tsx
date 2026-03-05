@@ -96,7 +96,7 @@ export default function CreateRoomModal({
         body: JSON.stringify({
           name: name.trim(),
           ...(imgUrl ? { img: imgUrl } : {}),
-          ...(topic ? { topic } : {}),
+          ...(topic ? { roomVibe: topic.toUpperCase() } : {}),
           maxMembers,
           lat,
           lng,

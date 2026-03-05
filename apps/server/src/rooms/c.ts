@@ -2,6 +2,7 @@ import { prisma } from "@repo/db";
 import { Request, Response } from "express";
 import { cache, pipeline, ratelimit } from "@repo/redis";
 import {
+  blacklistRoomSchema,
   createRoomSchema,
   degradeAdminSchema,
   deleteRoomSchema,
@@ -106,7 +107,6 @@ const Rooms = {
   },
 
   async createRoom(req: Request, res: Response) {
-    console.log(" i a, coming");
     try {
       if (!req.user || !req.user.id) {
         return res.status(401).json({
@@ -114,7 +114,6 @@ const Rooms = {
           success: false,
         });
       }
-      console.log("uff", req.body);
       const { success, data } = createRoomSchema.safeParse(req.body);
       if (!success) {
         return res.status(403).json({
@@ -146,6 +145,8 @@ const Rooms = {
             lat,
             lng,
             img: data.img,
+            // @ts-ignore
+            roomVibe: data.roomVibe,
           },
         });
         await tx.roomMember.create({
@@ -226,7 +227,6 @@ const Rooms = {
           409,
         );
       }
-      console.log("rommror", data.roomId);
       const { member, room } = await prisma.$transaction(async (tx) => {
         // lock room row for preventing the race conditions for member count
         const rows = await tx.$queryRaw<
@@ -255,7 +255,6 @@ const Rooms = {
             FOR UPDATE
           `;
         const room = rows[0];
-        console.log("heyeyye", room);
         if (!room) throw new AppError("room not found", 404);
         if (room.isBlacklisted) throw new AppError("room is blacklisted", 403);
         if (room.isDeleted) throw new AppError("room not found", 404);
@@ -897,6 +896,88 @@ const Rooms = {
       });
     } catch (error) {
       console.log("error", error);
+      if (error instanceof AppError) {
+        return res.status(error.status).json({
+          message: error.message,
+          success: false,
+        });
+      }
+      return res.status(500).json({
+        message: "internal server error",
+        success: false,
+      });
+    }
+  },
+
+  async reportRoom(req: Request, res: Response) {
+    try {
+      // the user must be member of the room
+      if (!req.user.id) {
+        return res.status(401).json({
+          message: "Unauthorized User",
+          success: false,
+        });
+      }
+      const { roomId } = req.params;
+      if (!roomId || Array.isArray(roomId)) return;
+      const { success, data } = blacklistRoomSchema.safeParse(req.body);
+      if (!success) {
+        return res.status(400).json({
+          message: "reason required to blacklist room",
+          success: false,
+        });
+      }
+      const isMember = await prisma.roomMember.findFirst({
+        where: {
+          userId: req.user.id,
+          roomId,
+        },
+      });
+      if (!isMember) {
+        return res.status(404).json({
+          message: "you are not a room member",
+          success: false,
+        });
+      }
+      const isBlacklisted = await prisma.user.findFirst({
+        where: {
+          id: req.user.id,
+          isBlacklisted: true,
+        },
+      });
+      if (isBlacklisted) {
+        return res.status(409).json({
+          message: "you are blacklisted",
+          success: false,
+        });
+      }
+      const isReported = await prisma.blacklistRoom.findUnique({
+        where: {
+          roomId_reportedById: {
+            roomId,
+            reportedById: req.user.id,
+          },
+        },
+      });
+      if (isReported) {
+        return res.status(200).json({
+          message: "you report has been accepted the action will be taken",
+          success: true,
+        });
+      }
+      await prisma.blacklistRoom.create({
+        data: {
+          reportedById: req.user.id,
+          roomId,
+          reason: data.reason,
+        },
+      });
+      return res.status(200).json({
+        message: "the room has been successfully reported",
+        success: true,
+      });
+    } catch (error) {
+      console.log(error);
       if (error instanceof AppError) {
         return res.status(error.status).json({
           message: error.message,

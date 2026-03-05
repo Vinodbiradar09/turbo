@@ -1,5 +1,4 @@
 "use client";
-
 import { useRef, useState, useCallback } from "react";
 
 export function useVoiceRecorder() {
@@ -10,14 +9,25 @@ export function useVoiceRecorder() {
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const start = useCallback(async () => {
+    if (recording) return; // already recording
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream, { mimeType: "audio/webm" });
+
+      // Pick best supported mimeType (Safari doesn't support audio/webm)
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+          ? "audio/mp4"
+          : "";
+
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       mediaRecorder.current = mr;
       chunks.current = [];
+
       mr.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.current.push(e.data);
       };
+
       mr.start(100);
       setRecording(true);
       setDuration(0);
@@ -25,18 +35,22 @@ export function useVoiceRecorder() {
     } catch {
       console.error("Microphone access denied");
     }
-  }, []);
+  }, [recording]);
 
+  // Returns the blob when released — caller decides to send or cancel
   const stop = useCallback((): Promise<Blob | null> => {
     return new Promise((resolve) => {
       if (!mediaRecorder.current) return resolve(null);
       mediaRecorder.current.onstop = () => {
-        const blob = new Blob(chunks.current, { type: "audio/webm" });
+        const type = mediaRecorder.current?.mimeType || "audio/webm";
+        const blob = new Blob(chunks.current, { type });
         mediaRecorder.current?.stream.getTracks().forEach((t) => t.stop());
+        mediaRecorder.current = null;
         resolve(blob);
       };
       mediaRecorder.current.stop();
       setRecording(false);
+      setDuration(0);
       if (timer.current) clearInterval(timer.current);
     });
   }, []);
@@ -45,6 +59,7 @@ export function useVoiceRecorder() {
     if (!mediaRecorder.current) return;
     mediaRecorder.current.stream.getTracks().forEach((t) => t.stop());
     mediaRecorder.current = null;
+    chunks.current = [];
     setRecording(false);
     setDuration(0);
     if (timer.current) clearInterval(timer.current);

@@ -6,6 +6,7 @@ import {
   fileToMessageType,
 } from "@/hooks/rooms/cloudinary";
 import { useVoiceRecorder } from "@/hooks/rooms/useVoiceRecorder";
+import Image from "next/image";
 
 interface Props {
   onSend: (content: string, type: "TEXT" | "IMAGE" | "VIDEO" | "AUDIO") => void;
@@ -15,8 +16,8 @@ interface Props {
 interface PendingMedia {
   file: File | Blob;
   type: "IMAGE" | "VIDEO" | "AUDIO";
-  preview: string; // object URL for preview
-  label: string; // "photo.jpg" etc
+  preview: string;
+  label: string;
 }
 
 export default function MessageInput({ onSend, disabled }: Props) {
@@ -25,11 +26,24 @@ export default function MessageInput({ onSend, disabled }: Props) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showAttach, setShowAttach] = useState(false);
+  const [slideX, setSlideX] = useState(0);
+  const [showHoldHint, setShowHoldHint] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
   const { recording, formattedDuration, start, stop, cancel } =
     useVoiceRecorder();
 
-  // File selected — just preview it, don't upload yet
+  // Refs to track press state without stale closures
+  const pressStartTime = useRef(0);
+  const pressOriginX = useRef(0);
+  const cancelledRef = useRef(false);
+  const recordingStarted = useRef(false);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const CANCEL_THRESHOLD = 60; // px slide left to cancel
+  const MIN_HOLD_MS = 200; // must hold at least this long before recording starts
+
+  // ── File select ──
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -44,19 +58,7 @@ export default function MessageInput({ onSend, disabled }: Props) {
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  // Voice recorded — preview as pending media
-  const handleVoiceEnd = useCallback(async () => {
-    const blob = await stop();
-    if (!blob) return;
-    setPendingMedia({
-      file: blob,
-      type: "AUDIO",
-      preview: URL.createObjectURL(blob),
-      label: `Voice note · ${formattedDuration}`,
-    });
-  }, [stop, formattedDuration]);
-
-  // Send — upload media now (only on explicit send), then callback
+  // ── Send ──
   const handleSend = useCallback(async () => {
     if (disabled || uploading) return;
 
@@ -93,7 +95,116 @@ export default function MessageInput({ onSend, disabled }: Props) {
     }
   };
 
+  // ── Voice: press start ──
+  const handleVoicePressStart = useCallback(
+    (clientX: number) => {
+      if (disabled || uploading) return;
+      pressStartTime.current = Date.now();
+      pressOriginX.current = clientX;
+      cancelledRef.current = false;
+      recordingStarted.current = false;
+      setSlideX(0);
+
+      // Delay so a quick tap doesn't flash mic permission
+      holdTimer.current = setTimeout(async () => {
+        await start();
+        recordingStarted.current = true;
+      }, MIN_HOLD_MS);
+    },
+    [disabled, uploading, start],
+  );
+
+  // ── Voice: move (slide to cancel) ──
+  const handleVoicePressMove = useCallback(
+    (clientX: number) => {
+      if (!recording && !recordingStarted.current) return;
+      const delta = pressOriginX.current - clientX; // positive = sliding left
+      const clamped = Math.max(0, delta);
+      setSlideX(clamped);
+
+      if (clamped > CANCEL_THRESHOLD && !cancelledRef.current) {
+        cancelledRef.current = true;
+        cancel();
+        setSlideX(0);
+      }
+    },
+    [recording, cancel],
+  );
+
+  // ── Voice: press end ──
+  const handleVoicePressEnd = useCallback(async () => {
+    if (holdTimer.current) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+
+    // If cancelled by sliding
+    if (cancelledRef.current) {
+      cancelledRef.current = false;
+      setSlideX(0);
+      return;
+    }
+
+    // If not recording yet (quick tap — recording hasn't started)
+    if (!recording && !recordingStarted.current) {
+      setShowHoldHint(true);
+      setTimeout(() => setShowHoldHint(false), 2000);
+      return;
+    }
+
+    // Stop and get blob
+    setSlideX(0);
+    const blob = await stop();
+    if (!blob || blob.size < 1000) return; // ignore sub-1KB blobs (< ~0.1s)
+
+    setPendingMedia({
+      file: blob,
+      type: "AUDIO",
+      preview: URL.createObjectURL(blob),
+      label: `Voice note · ${formattedDuration}`,
+    });
+  }, [recording, stop, formattedDuration]);
+
+  // ── Mouse handlers (desktop) ──
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      handleVoicePressStart(e.clientX);
+
+      const onMove = (ev: MouseEvent) => handleVoicePressMove(ev.clientX);
+      const onUp = () => {
+        handleVoicePressEnd();
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+      };
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [handleVoicePressStart, handleVoicePressMove, handleVoicePressEnd],
+  );
+
+  // ── Touch handlers (mobile) ──
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      e.preventDefault();
+      handleVoicePressStart(e.touches[0]!.clientX);
+    },
+    [handleVoicePressStart],
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      handleVoicePressMove(e.touches[0]!.clientX);
+    },
+    [handleVoicePressMove],
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    handleVoicePressEnd();
+  }, [handleVoicePressEnd]);
+
   const canSend = !disabled && !uploading && (!!pendingMedia || !!text.trim());
+  const isCancelling = slideX > 20;
 
   return (
     <div className="px-4 py-3 bg-[#F5F0E8]/95 backdrop-blur-sm border-t border-[#D4C5B0]/40">
@@ -117,18 +228,53 @@ export default function MessageInput({ onSend, disabled }: Props) {
         </div>
       )}
 
-      {/* Voice recording indicator */}
+      {/* Voice recording bar */}
       {recording && (
-        <div className="flex items-center gap-3 mb-3 px-4 py-2.5 bg-white rounded-2xl border border-[#D4C5B0]/40">
-          <div className="w-2 h-2 rounded-full bg-[#C4785A] animate-pulse" />
-          <span className="font-dm text-[13px] text-[#3d4d3e] flex-1">
-            Recording {formattedDuration}
+        <div
+          className="flex items-center gap-3 mb-3 px-4 py-2.5 rounded-2xl border transition-all duration-150"
+          style={{
+            background: isCancelling ? "rgba(239,68,68,0.06)" : "white",
+            borderColor: isCancelling
+              ? "rgba(239,68,68,0.3)"
+              : "rgba(212,197,176,0.4)",
+            transform: `translateX(${-Math.min(slideX * 0.15, 12)}px)`,
+          }}
+        >
+          <div
+            className={`w-2 h-2 rounded-full animate-pulse ${isCancelling ? "bg-red-400" : "bg-[#C4785A]"}`}
+          />
+          <span className="font-dm text-[13px] text-[#3d4d3e] flex-1 tabular-nums">
+            {formattedDuration}
           </span>
-          <button
-            onClick={cancel}
-            className="font-dm text-[11px] text-[#8a9a8b] hover:text-[#C4785A] transition-colors"
+
+          {/* Slide to cancel hint */}
+          <div
+            className={`flex items-center gap-1.5 transition-opacity ${isCancelling ? "opacity-100" : "opacity-40"}`}
           >
-            Cancel
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className={`w-3.5 h-3.5 ${isCancelling ? "text-red-400" : "text-[#8a9a8b]"}`}
+            >
+              <path d="M19 12H5M12 5l-7 7 7 7" />
+            </svg>
+            <span
+              className={`font-dm text-[11px] ${isCancelling ? "text-red-400" : "text-[#8a9a8b]"}`}
+            >
+              {isCancelling ? "Release to cancel" : "Slide left to cancel"}
+            </span>
+          </div>
+
+          <button
+            onClick={() => {
+              cancel();
+              setSlideX(0);
+            }}
+            className="font-dm text-[11px] text-[#8a9a8b] hover:text-[#C4785A] transition-colors ml-2"
+          >
+            ✕
           </button>
         </div>
       )}
@@ -136,16 +282,15 @@ export default function MessageInput({ onSend, disabled }: Props) {
       {/* Pending media preview */}
       {pendingMedia && !uploading && (
         <div className="flex items-center gap-3 mb-3 px-4 py-2.5 bg-white rounded-2xl border border-[#D4C5B0]/40">
-          {/* Thumbnail */}
           {pendingMedia.type === "IMAGE" && (
-            <img
+            <Image
               src={pendingMedia.preview}
               alt="preview"
-              className="w-10 h-10 rounded-xl object-cover flex-shrink-0"
+              className="w-10 h-10 rounded-xl object-cover shrink-0"
             />
           )}
           {pendingMedia.type === "VIDEO" && (
-            <div className="w-10 h-10 rounded-xl bg-[#E8DDD0] flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#E8DDD0] flex items-center justify-center shrink-0">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -159,7 +304,7 @@ export default function MessageInput({ onSend, disabled }: Props) {
             </div>
           )}
           {pendingMedia.type === "AUDIO" && (
-            <div className="w-10 h-10 rounded-xl bg-[#E8DDD0] flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#E8DDD0] flex items-center justify-center shrink-0">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -172,19 +317,17 @@ export default function MessageInput({ onSend, disabled }: Props) {
               </svg>
             </div>
           )}
-
           <div className="flex-1 min-w-0">
             <p className="font-dm text-[12px] text-[#3d4d3e] truncate">
               {pendingMedia.label}
             </p>
             <p className="font-dm text-[10px] text-[#8a9a8b] mt-0.5">
-              Ready to send · tap send to upload
+              Ready to send · tap ↑ to upload
             </p>
           </div>
-
           <button
             onClick={() => setPendingMedia(null)}
-            className="w-6 h-6 rounded-full bg-[#E8DDD0] hover:bg-[#D4C5B0] flex items-center justify-center transition-colors flex-shrink-0"
+            className="w-6 h-6 rounded-full bg-[#E8DDD0] hover:bg-[#D4C5B0] flex items-center justify-center transition-colors shrink-0"
           >
             <svg
               viewBox="0 0 24 24"
@@ -199,7 +342,7 @@ export default function MessageInput({ onSend, disabled }: Props) {
         </div>
       )}
 
-      {/* Attach options popup */}
+      {/* Attach popup */}
       {showAttach && (
         <div className="flex items-center gap-2 mb-3">
           {[
@@ -261,8 +404,12 @@ export default function MessageInput({ onSend, disabled }: Props) {
           <button
             onClick={() => setShowAttach(!showAttach)}
             disabled={disabled || uploading}
-            className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-40
-              ${showAttach ? "bg-[#2E3B2F] text-white" : "bg-white border border-[#D4C5B0]/60 text-[#6b7d6c] hover:text-[#2E3B2F] hover:border-[#2E3B2F]/30"}`}
+            className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-40
+              ${
+                showAttach
+                  ? "bg-[#2E3B2F] text-white"
+                  : "bg-white border border-[#D4C5B0]/60 text-[#6b7d6c] hover:text-[#2E3B2F] hover:border-[#2E3B2F]/30"
+              }`}
           >
             <svg
               viewBox="0 0 24 24"
@@ -277,7 +424,7 @@ export default function MessageInput({ onSend, disabled }: Props) {
         )}
 
         {/* Text input */}
-        <div className="flex-1">
+        <div className="flex-1 relative">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -301,12 +448,12 @@ export default function MessageInput({ onSend, disabled }: Props) {
           />
         </div>
 
-        {/* Send / Voice */}
-        {canSend || pendingMedia ? (
+        {/* Send button (when there's content) */}
+        {canSend ? (
           <button
             onClick={handleSend}
             disabled={!canSend}
-            className="flex-shrink-0 w-10 h-10 rounded-full bg-[#2E3B2F] flex items-center justify-center shadow-[0_4px_16px_rgba(46,59,47,0.3)] hover:shadow-[0_6px_24px_rgba(46,59,47,0.4)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50"
+            className="shrink-0 w-10 h-10 rounded-full bg-[#2E3B2F] flex items-center justify-center shadow-[0_4px_16px_rgba(46,59,47,0.3)] hover:shadow-[0_6px_24px_rgba(46,59,47,0.4)] hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50"
           >
             <svg
               viewBox="0 0 24 24"
@@ -319,39 +466,57 @@ export default function MessageInput({ onSend, disabled }: Props) {
             </svg>
           </button>
         ) : (
-          <button
-            onMouseDown={start}
-            onMouseUp={handleVoiceEnd}
-            onTouchStart={start}
-            onTouchEnd={handleVoiceEnd}
-            disabled={disabled || uploading}
-            className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 disabled:opacity-50 select-none
-              ${
-                recording
-                  ? "bg-[#C4785A] shadow-[0_4px_16px_rgba(196,120,90,0.4)] scale-110"
-                  : "bg-white border border-[#D4C5B0]/60 hover:border-[#2E3B2F]/30 text-[#6b7d6c]"
-              }`}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke={recording ? "white" : "currentColor"}
-              strokeWidth="1.8"
-              className="w-4 h-4"
-            >
-              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />
-            </svg>
-          </button>
-        )}
+          /* Mic button — hold to record */
+          <div className="relative shrink-0">
+            {/* "Hold to record" hint */}
+            {showHoldHint && (
+              <div className="absolute bottom-12 right-0 bg-[#2E3B2F] text-white font-dm text-[11px] px-3 py-1.5 rounded-full whitespace-nowrap shadow-md pointer-events-none">
+                Hold to record
+              </div>
+            )}
 
-        <input
-          ref={fileRef}
-          type="file"
-          className="hidden"
-          onChange={handleFileSelect}
-        />
+            <button
+              type="button"
+              disabled={disabled || uploading}
+              onMouseDown={handleMouseDown}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onContextMenu={(e) => e.preventDefault()} // block long-press menu on mobile
+              className={`
+                w-10 h-10 rounded-full flex items-center justify-center
+                transition-all duration-150 select-none touch-none
+                disabled:opacity-40 disabled:cursor-not-allowed
+                ${
+                  recording
+                    ? isCancelling
+                      ? "bg-red-500 scale-110 shadow-[0_0_0_6px_rgba(239,68,68,0.15)]"
+                      : "bg-[#C4785A] scale-110 shadow-[0_4px_16px_rgba(196,120,90,0.4)]"
+                    : "bg-white border border-[#D4C5B0]/60 text-[#6b7d6c] hover:text-[#2E3B2F] hover:border-[#2E3B2F]/30"
+                }
+              `}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke={recording ? "white" : "currentColor"}
+                strokeWidth="1.8"
+                className="w-4 h-4"
+              >
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
+
+      <input
+        ref={fileRef}
+        type="file"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
     </div>
   );
 }

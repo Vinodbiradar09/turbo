@@ -15,6 +15,7 @@ function fmt(ts: number | string) {
 }
 
 function initials(name: string) {
+  console.log("nameees", name);
   return name
     .split(" ")
     .slice(0, 2)
@@ -25,6 +26,7 @@ function initials(name: string) {
 
 // Deterministic color per sender
 function avatarGradient(name: string): string {
+  console.log("nameee", name);
   const gradients = [
     "from-[#4a6f51] to-[#2E3B2F]",
     "from-[#7a5a4a] to-[#5a3a2a]",
@@ -40,16 +42,18 @@ function avatarGradient(name: string): string {
 }
 
 export default function MessageBubble({ msg, isOwn, showSender }: Props) {
+  console.log("what is present in the msg", msg);
+  console.log("own", isOwn);
   return (
     <div
       className={`flex items-end gap-2 group ${isOwn ? "flex-row-reverse" : "flex-row"}`}
     >
       {/* Avatar — initials only, no profile photos */}
       {!isOwn && (
-        <div className="flex-shrink-0 mb-1">
+        <div className="shrink-0 mb-1">
           {showSender ? (
             <div
-              className={`w-7 h-7 rounded-full bg-gradient-to-br ${avatarGradient(msg.senderName)} flex items-center justify-center`}
+              className={`w-7 h-7 rounded-full bg-linear-to-br ${avatarGradient(msg.senderName)} flex items-center justify-center`}
             >
               <span className="font-dm text-[9px] font-bold text-white/80">
                 {initials(msg.senderName)}

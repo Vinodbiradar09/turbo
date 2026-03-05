@@ -21,4 +21,5 @@ roomRouter.patch(
 roomRouter.delete("/:roomId/members", AuthHandler, Rooms.removeRoomMembers);
 roomRouter.get("/:roomId/messages", AuthHandler, Rooms.getRoomMessages);
 roomRouter.get("/:roomId/members", AuthHandler, Rooms.getRoomMembers);
+roomRouter.post("/:roomId/report", AuthHandler, Rooms.reportRoom);
 export { roomRouter };

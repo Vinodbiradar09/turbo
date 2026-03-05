@@ -6,6 +6,20 @@ const createRoomSchema = z.object({
   img: z.string().optional(),
   lat: z.number(),
   lng: z.number(),
+  roomVibe: z
+    .enum([
+      "MUSIC",
+      "ART",
+      "FOOD",
+      "SPORTS",
+      "TECH",
+      "GAMING",
+      "BOOKS",
+      "FILM",
+      "NATURE",
+      "OTHER",
+    ])
+    .optional(),
 });
 
 const joinRoomSchema = z.object({

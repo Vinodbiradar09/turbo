@@ -6,6 +6,7 @@ import NearMeClient from "./NearMeClient";
 import LocationGate from "./LocationGate";
 import { CurrentUser } from "./types";
 import Link from "next/link";
+import { Metadata } from "next";
 
 interface PageProps {
   searchParams: Promise<{
@@ -82,7 +83,7 @@ export default async function NearMePage({ searchParams }: PageProps) {
             <p className="font-cormorant text-[24px] text-[#2E3B2F] mb-2">
               Location access denied
             </p>
-            <p className="font-dm text-[13px] text-[#6b7d6c] max-w-[280px] text-center leading-relaxed">
+            <p className="font-dm text-[13px] text-[#6b7d6c] max-w-70 text-center leading-relaxed">
               Circl needs your location to find rooms nearby. Please allow
               access in your browser settings and try again.
             </p>
@@ -117,6 +118,6 @@ export default async function NearMePage({ searchParams }: PageProps) {
   );
 }
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Nearby Rooms · Circl",
 };

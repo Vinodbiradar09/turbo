@@ -158,6 +158,7 @@ export class RoomManager {
       event: "MESSAGE",
       roomId,
       senderId: ws.user.id,
+      senderName: ws.user.name,
       content,
       type,
       createdAt: now.getTime(),

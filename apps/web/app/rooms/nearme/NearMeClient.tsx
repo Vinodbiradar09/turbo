@@ -214,18 +214,6 @@ export default function NearMeClient({
     ],
   );
 
-  /**
-   * WHY client-side fetch instead of router.replace():
-   *
-   * Next.js App Router does a SOFT navigation when replacing within the same
-   * route — the RSC page.tsx does NOT re-run, so roomsNearMe() is never called
-   * again and rooms don't update. The component also doesn't unmount, so
-   * setRefreshing(false) was never reached → spinner ran forever.
-   *
-   * Fix: call roomsNearMe() directly as a server action from the client.
-   * This fetches fresh rooms without any navigation, updates state immediately,
-   * then cosmetically updates the URL to reflect new coords.
-   */
   const handleRefresh = useCallback(async () => {
     if (refreshing) return;
     setRefreshing(true);

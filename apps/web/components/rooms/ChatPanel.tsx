@@ -221,7 +221,7 @@ export default function ChatPanel({
       </div>
 
       {/* Input */}
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <MessageInput onSend={onSendMessage} disabled={!connected} />
       </div>
     </div>

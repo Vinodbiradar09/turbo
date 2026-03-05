@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Member, NearbyRoom } from "../../app/rooms/nearme/types";
+import { types } from "node:util";
 
 interface Props {
   room: NearbyRoom;
@@ -88,6 +89,7 @@ export default function ThreeDotMenu({
   };
 
   const submitReport = async (type: "room" | "user") => {
+    console.log("type is", type);
     if (!selectedReason || submitting) return;
     const key =
       type === "room" ? `room-${room.id}` : `user-${reportingUser?.userId}`;
