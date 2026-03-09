@@ -211,7 +211,10 @@ const Rooms = {
         where: { id: req.user.id, isBlacklisted: true },
       });
       if (isUserBlacklisted) {
-        throw new AppError("you are Blacklisted", 403);
+        return res.status(409).json({
+          message: "you are blacklisted",
+          success: false,
+        });
       }
       // check user is a member of room
       const isMember = await prisma.roomMember.findFirst({
@@ -222,10 +225,10 @@ const Rooms = {
         select: { role: true, leftAt: true },
       });
       if (isMember) {
-        throw new AppError(
-          `you are already a ${isMember.role} of the room`,
-          409,
-        );
+        return res.status(200).json({
+          message: `you are already a ${isMember.role} of the room`,
+          success: true,
+        });
       }
       const { member, room } = await prisma.$transaction(async (tx) => {
         // lock room row for preventing the race conditions for member count
@@ -690,6 +693,7 @@ const Rooms = {
               content: true,
               offset: true,
               createdAt: true,
+              type: true,
               sender: {
                 select: {
                   id: true,
@@ -708,6 +712,7 @@ const Rooms = {
             createdAt: msg.createdAt,
             offset: msg.offset.toString(),
             sender: msg.sender,
+            type: msg.type,
           }));
         },
         {

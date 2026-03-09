@@ -48,7 +48,6 @@ export default function MessageBubble({ msg, isOwn, showSender }: Props) {
     <div
       className={`flex items-end gap-2 group ${isOwn ? "flex-row-reverse" : "flex-row"}`}
     >
-      {/* Avatar — initials only, no profile photos */}
       {!isOwn && (
         <div className="shrink-0 mb-1">
           {showSender ? (

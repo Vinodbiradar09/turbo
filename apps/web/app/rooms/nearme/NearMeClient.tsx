@@ -80,6 +80,18 @@ export default function NearMeClient({
   });
 
   useEffect(() => {
+    for (const room of initialRooms) {
+      if (room.isMember) {
+        const session = getSession(room.id);
+        session.joined = true;
+        session.wsJoined = false;
+        roomSessions.current.set(room.id, session);
+      }
+    }
+    bumpVersion();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     const roomParam = searchParams.get("room");
     if (roomParam) {
       const room = rooms.find((r) => r.id === roomParam);
@@ -221,7 +233,11 @@ export default function NearMeClient({
     const fetchRooms = async (newLat: number, newLng: number) => {
       try {
         const result = await roomsNearMe(newLat, newLng, cookieHeader);
-        setRooms(result?.rooms ?? []);
+        const enriched = (result?.rooms ?? []).map((r) => ({
+          ...r,
+          isMember: roomSessions.current.get(r.id)?.joined ?? false,
+        }));
+        setRooms(enriched ?? []);
         // Update URL cosmetically (no navigation, no remount)
         router.replace(`/rooms/nearme?lat=${newLat}&lng=${newLng}`, {
           scroll: false,

@@ -17,6 +17,7 @@ export interface NearbyRoom {
   isDeleted?: boolean;
   isBlacklisted?: boolean;
   creatorId?: string;
+  isMember?: boolean;
 }
 
 export interface RoomsResponse {

@@ -279,14 +279,16 @@ export default function MessageInput({ onSend, disabled }: Props) {
         </div>
       )}
 
-      {/* Pending media preview */}
       {pendingMedia && !uploading && (
         <div className="flex items-center gap-3 mb-3 px-4 py-2.5 bg-white rounded-2xl border border-[#D4C5B0]/40">
           {pendingMedia.type === "IMAGE" && (
             <Image
               src={pendingMedia.preview}
+              width={40}
+              height={40}
               alt="preview"
               className="w-10 h-10 rounded-xl object-cover shrink-0"
+              unoptimized
             />
           )}
           {pendingMedia.type === "VIDEO" && (
@@ -342,7 +344,6 @@ export default function MessageInput({ onSend, disabled }: Props) {
         </div>
       )}
 
-      {/* Attach popup */}
       {showAttach && (
         <div className="flex items-center gap-2 mb-3">
           {[
@@ -397,9 +398,7 @@ export default function MessageInput({ onSend, disabled }: Props) {
         </div>
       )}
 
-      {/* Input row */}
       <div className="flex items-end gap-2.5">
-        {/* Attach button */}
         {!pendingMedia && !recording && (
           <button
             onClick={() => setShowAttach(!showAttach)}
@@ -423,7 +422,6 @@ export default function MessageInput({ onSend, disabled }: Props) {
           </button>
         )}
 
-        {/* Text input */}
         <div className="flex-1 relative">
           <textarea
             value={text}
@@ -448,7 +446,6 @@ export default function MessageInput({ onSend, disabled }: Props) {
           />
         </div>
 
-        {/* Send button (when there's content) */}
         {canSend ? (
           <button
             onClick={handleSend}
@@ -466,7 +463,6 @@ export default function MessageInput({ onSend, disabled }: Props) {
             </svg>
           </button>
         ) : (
-          /* Mic button — hold to record */
           <div className="relative shrink-0">
             {/* "Hold to record" hint */}
             {showHoldHint && (

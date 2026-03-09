@@ -7,6 +7,7 @@ import LocationGate from "./LocationGate";
 import { CurrentUser } from "./types";
 import Link from "next/link";
 import { Metadata } from "next";
+import { prisma } from "@repo/db";
 
 interface PageProps {
   searchParams: Promise<{
@@ -104,11 +105,24 @@ export default async function NearMePage({ searchParams }: PageProps) {
   }
 
   const { rooms } = await roomsNearMe(lat!, lng!, cookieHeader);
-
+  const memberShips = await prisma.roomMember.findMany({
+    where: {
+      userId: session.user.id,
+      roomId: { in: rooms.map((r) => r.id) },
+    },
+    select: {
+      roomId: true,
+    },
+  });
+  const memberRoomIds = new Set(memberShips.map((m) => m.roomId));
+  const enrichedRooms = rooms.map((r) => ({
+    ...r,
+    isMember: memberRoomIds.has(r.id),
+  }));
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[#F5F0E8]">
       <NearMeClient
-        initialRooms={rooms}
+        initialRooms={enrichedRooms}
         currentUser={currentUser}
         cookieHeader={cookieHeader}
         lat={lat!}

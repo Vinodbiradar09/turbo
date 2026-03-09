@@ -48,9 +48,8 @@ export default function RoomCard({
       className="group relative flex items-center gap-4 px-5 py-4 rounded-2xl bg-white/60 backdrop-blur-sm border border-white/80 shadow-[0_2px_16px_rgba(46,59,47,0.06)] hover:shadow-[0_8px_32px_rgba(46,59,47,0.14)] hover:border-sand/80 hover:-translate-y-0.5 transition-all duration-300 no-underline"
       style={{ animationDelay: `${index * 60}ms` }}
     >
-      {/* Room image or initials avatar */}
-      <div className="relative flex-shrink-0">
-        <div className="w-[60px] h-[60px] rounded-[18px] overflow-hidden bg-gradient-to-br from-warm to-sand flex items-center justify-center shadow-[0_2px_8px_rgba(46,59,47,0.12)]">
+      <div className="relative shrink-0">
+        <div className="w-15 h-15 rounded-[18px] overflow-hidden bg-linear-to-br from-warm to-sand flex items-center justify-center shadow-[0_2px_8px_rgba(46,59,47,0.12)]">
           {room.img ? (
             <Image
               src={room.img}
@@ -79,7 +78,7 @@ export default function RoomCard({
           <h3 className="font-cormorant text-[17px] font-semibold text-ink leading-tight truncate group-hover:text-moss transition-colors duration-200">
             {room.name}
           </h3>
-          <span className="flex-shrink-0 text-[11px] font-dm text-sand tracking-wide">
+          <span className="shrink-0 text-[11px] font-dm text-sand tracking-wide">
             {formatDistance(room.distance_km)}
           </span>
         </div>
@@ -119,7 +118,7 @@ export default function RoomCard({
         fill="none"
         stroke="currentColor"
         strokeWidth="1.5"
-        className="w-4 h-4 text-sand/60 flex-shrink-0 -translate-x-1 group-hover:translate-x-0 group-hover:text-moss/40 transition-all duration-300"
+        className="w-4 h-4 text-sand/60 shrink-0 -translate-x-1 group-hover:translate-x-0 group-hover:text-moss/40 transition-all duration-300"
       >
         <path d="M9 18l6-6-6-6" />
       </svg>

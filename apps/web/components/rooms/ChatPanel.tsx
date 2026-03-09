@@ -46,7 +46,7 @@ function toMessage(m: ApiMessage, roomId: string): Message {
     senderName: m.sender.name,
     senderImage: null,
     content: m.content,
-    type: (m as any).type ?? "TEXT",
+    type: m.type ?? "TEXT",
     createdAt: new Date(m.createdAt).getTime(),
   };
 }
